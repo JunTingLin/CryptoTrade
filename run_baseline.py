@@ -16,7 +16,7 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from torch.utils.data import DataLoader, TensorDataset
 
-device = 'cuda:7'
+device = 'cuda:0'
 BUY, SELL = 0.5, -0.5
 # BUY, SELL = 1, -1
 FULL_BUY, FULL_SELL = 1, -1

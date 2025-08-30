@@ -1,0 +1,16 @@
+# Core dependencies for CryptoTrade LLM Agent
+openai>=1.30.5
+numpy
+pandas
+tenacity
+pyyaml
+python-dotenv
+
+# Optional: Only needed if running baseline models (run_baseline.py)
+# Uncomment these lines if you need to run baseline comparisons:
+matplotlib
+scikit-learn
+# 
+# For GPU support (CUDA 12.x compatible):
+# pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+#
