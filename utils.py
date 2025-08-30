@@ -2,10 +2,21 @@ import os
 import sys
 from openai import OpenAI
 
+# Load .env file if it exists
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not installed, use environment variables directly
+
 api_key = os.getenv('OPENAI_API_KEY')
 api_base = os.getenv('OPENAI_API_BASE')
-# client = OpenAI(api_key=api_key, base_url=api_base)
-client = OpenAI(api_key=api_key)
+
+if api_base:
+    print(f"Using custom API base: {api_base}")
+    client = OpenAI(api_key=api_key, base_url=api_base)
+else:
+    client = OpenAI(api_key=api_key)
 
 
 from tenacity import (
