@@ -14,6 +14,3 @@ scikit-learn
 # For GPU support (CUDA 12.x compatible):
 # pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu126
 #
-# Local LLM support
-# sudo apt-get install -y nvidia-cuda-toolkit
-# CMAKE_ARGS="-DGGML_BLAS=ON -DGGML_BLAS_VENDOR=OpenBLAS" pip install llama-cpp-python

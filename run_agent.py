@@ -4,15 +4,13 @@ import argparse
 
 from eth_trial import run_trial
 from generate_reflections import update_memory
-from llm_interface import initialize_openai_llm, initialize_llamacpp_llm
 
 from typing import Any, List, Dict
 
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default='eth', help="[eth, btc, sol]")
-    parser.add_argument("--model", type=str, default='gpt-3.5-turbo', help="Model name or filename (e.g., gpt-4o, Qwen2.5-14B-Instruct-Q6_K.gguf)")
-    parser.add_argument("--llm_backend", type=str, default='openai', help="LLM backend [openai, llamacpp]")
+    parser.add_argument("--model", type=str, default='gpt-3.5-turbo', help="[gpt-3.5-turbo, gpt-4o, gpt-4-turbo]")
     parser.add_argument("--to_print", type=int, default=1, help="Print debug info")
 
     parser.add_argument("--starting_date", type=str, default='2023-08-01', help="The starting date for the environment")
@@ -37,24 +35,6 @@ def get_parser():
 
 def main(args) -> None:
     print(args)
-    
-    # Initialize LLM backend based on --llm_backend parameter
-    if args.llm_backend == 'llamacpp':
-        # Use llama-cpp-python with local model
-        model_path = f"./models/{args.model}" if not args.model.startswith('./') else args.model
-        initialize_llamacpp_llm(
-            model_path=model_path,
-            n_gpu_layers=48,  # Use all GPU layers for best performance
-            n_ctx=4096,       # Context window for longer conversations
-            verbose=False     # Set to True for debugging
-        )
-        print(f"Using llamacpp backend with model: {args.model}")
-    elif args.llm_backend == 'openai':
-        # Use OpenAI-compatible API (OpenAI, vLLM, Ollama)
-        initialize_openai_llm()
-        print(f"Using OpenAI-compatible backend with model: {args.model}")
-    else:
-        raise ValueError(f"Unknown backend: {args.llm_backend}. Use 'openai' or 'llamacpp'")
 
     if args.is_resume:
         if not os.path.exists(args.resume_dir):

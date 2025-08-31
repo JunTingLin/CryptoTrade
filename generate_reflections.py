@@ -1,4 +1,4 @@
-from llm_interface import get_chat
+from utils import get_chat
 
 from typing import List, Dict, Any
 
