@@ -8,7 +8,10 @@ import openai
 import numpy as np
 import time
 import importlib
-from utils import Model, get_chat
+from llm_interface import get_chat
+from typing import Literal
+
+Model = Literal["gpt-4", "gpt-3.5-turbo", "gpt-4o", "gpt-4-turbo"]
 from eth_env import ETHTradingEnv
 from env_history import EnvironmentHistory
 
