@@ -5,6 +5,7 @@ pandas
 tenacity
 pyyaml
 python-dotenv
+ipykernel
 
 # Optional: Only needed if running baseline models (run_baseline.py)
 # Uncomment these lines if you need to run baseline comparisons:

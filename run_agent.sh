@@ -13,6 +13,8 @@
 # python -u run_agent.py --model gpt-4-turbo --dataset eth &>4turbo-eth-bull.out 2>&1
 
 # Main results 4o
+python -u run_agent.py --model gpt-oss:20b --dataset btc --starting_date 2023-04-12 --ending_date 2023-06-16 &>logs/btc-bear-4o.out 2>&1
+
 python -u run_agent.py --model gpt-4o --dataset btc --starting_date 2023-04-12 --ending_date 2023-06-16 &>logs/btc-bear-4o.out 2>&1
 python -u run_agent.py --model gpt-4o --dataset btc --starting_date 2023-06-17 --ending_date 2023-08-25 &>logs/btc-sideways-4o.out 2>&1
 python -u run_agent.py --model gpt-4o --dataset btc --starting_date 2023-10-01 --ending_date 2023-12-01 &>logs/btc-bull-4o.out 2>&1

@@ -10,7 +10,7 @@ from typing import Any, List, Dict
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default='eth', help="[eth, btc, sol]")
-    parser.add_argument("--model", type=str, default='gpt-3.5-turbo', help="[gpt-3.5-turbo, gpt-4o, gpt-4-turbo]")
+    parser.add_argument("--model", type=str, default='gpt-oss:20b', help="[gpt-3.5-turbo, gpt-4o, gpt-4-turbo, gpt-oss:20b, hf.co/bartowski/Qwen2.5-14B-Instruct-GGUF:latest]")
     parser.add_argument("--to_print", type=int, default=1, help="Print debug info")
 
     parser.add_argument("--starting_date", type=str, default='2023-08-01', help="The starting date for the environment")
