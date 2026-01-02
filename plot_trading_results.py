@@ -99,15 +99,15 @@ def parse_log_file(log_file_path):
     
     return pd.DataFrame(data)
 
-def create_plots(df):
+def create_plots(df, output_prefix='trading_plot'):
     """Create visualization plots from the parsed data."""
     if df.empty:
         print("No data to plot!")
         return
-    
+
     # Convert dates to datetime
     df['datetime'] = pd.to_datetime(df['dates'])
-    
+
     # 1. Trading Actions Over Time
     plt.figure(figsize=(10, 6))
     plt.plot(df['datetime'], df['actions'], 'b-', marker='o', markersize=6, linewidth=2)
@@ -119,8 +119,11 @@ def create_plots(df):
     plt.ylim(-1.1, 1.1)
     plt.xticks(rotation=45)
     plt.tight_layout()
-    plt.show()
-    
+    plot1_path = f'{output_prefix}_actions.png'
+    plt.savefig(plot1_path, dpi=150, bbox_inches='tight')
+    print(f"Saved: {plot1_path}")
+    plt.close()
+
     # 2. Daily Returns
     plt.figure(figsize=(10, 6))
     plt.plot(df['datetime'], df['today_roi'] * 100, 'g-', marker='o', markersize=6, linewidth=2)
@@ -131,8 +134,11 @@ def create_plots(df):
     plt.grid(True, alpha=0.3)
     plt.xticks(rotation=45)
     plt.tight_layout()
-    plt.show()
-    
+    plot2_path = f'{output_prefix}_daily_returns.png'
+    plt.savefig(plot2_path, dpi=150, bbox_inches='tight')
+    print(f"Saved: {plot2_path}")
+    plt.close()
+
     # 3. Cumulative Returns
     plt.figure(figsize=(10, 6))
     plt.plot(df['datetime'], df['cumulative_roi'] * 100, 'r-', marker='o', markersize=6, linewidth=2)
@@ -143,8 +149,11 @@ def create_plots(df):
     plt.grid(True, alpha=0.3)
     plt.xticks(rotation=45)
     plt.tight_layout()
-    plt.show()
-    
+    plot3_path = f'{output_prefix}_cumulative_returns.png'
+    plt.savefig(plot3_path, dpi=150, bbox_inches='tight')
+    print(f"Saved: {plot3_path}")
+    plt.close()
+
     # 4. Portfolio Net Worth
     plt.figure(figsize=(10, 6))
     plt.plot(df['datetime'], df['net_worth'], 'm-', marker='o', markersize=6, linewidth=2)
@@ -156,7 +165,10 @@ def create_plots(df):
     plt.xticks(rotation=45)
     plt.legend()
     plt.tight_layout()
-    plt.show()
+    plot4_path = f'{output_prefix}_net_worth.png'
+    plt.savefig(plot4_path, dpi=150, bbox_inches='tight')
+    print(f"Saved: {plot4_path}")
+    plt.close()
     
     # Print summary statistics
     print("\n=== Trading Summary ===")
@@ -174,27 +186,38 @@ def create_plots(df):
         sharpe_ratio = df['today_roi'].mean() / df['today_roi'].std()
         print(f"Sharpe Ratio: {sharpe_ratio:.4f}")
 
-def plot_trading_data(log_file_path):
+def plot_trading_data(log_file_path, output_prefix=None):
     """
     Main function to parse and plot trading data.
-    
+
     Args:
         log_file_path (str): Path to the log file
-    
+        output_prefix (str): Prefix for output plot files (default: derived from log file name)
+
     Usage in Jupyter/Python:
         plot_trading_data('logs/sample_run.out')
     """
     try:
         print(f"Parsing log file: {log_file_path}")
         df = parse_log_file(log_file_path)
-        
+
         if df.empty:
             print("No trading data found in the log file!")
             return
-        
+
         print(f"Found {len(df)} trading steps")
-        create_plots(df)
-        
+
+        # Generate output prefix from log file name if not provided
+        if output_prefix is None:
+            import os
+            base_name = os.path.splitext(os.path.basename(log_file_path))[0]
+            output_prefix = f"plots/{base_name}"
+
+            # Create plots directory if it doesn't exist
+            os.makedirs('plots', exist_ok=True)
+
+        create_plots(df, output_prefix)
+
     except FileNotFoundError:
         print(f"Error: Log file '{log_file_path}' not found!")
     except Exception as e:
@@ -202,15 +225,13 @@ def plot_trading_data(log_file_path):
 
 def main():
     """Command line interface"""
-    # import argparse
-    
-    # parser = argparse.ArgumentParser(description='Visualize trading results from log files')
-    # parser.add_argument('log_file', help='Path to the log file')
-    # args = parser.parse_args()
-    
-    # plot_trading_data(args.log_file)
+    import argparse
 
-    plot_trading_data('logs/btc-bear-gpt-oss-shift1.out')
+    parser = argparse.ArgumentParser(description='Visualize trading results from log files')
+    parser.add_argument('log_file', help='Path to the log file')
+    args = parser.parse_args()
+
+    plot_trading_data(args.log_file)
 
 if __name__ == "__main__":
     main()
