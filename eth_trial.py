@@ -49,8 +49,9 @@ def eth_run(env, base_prompt, memory, starting_state, args):
     done = False
     while not done:
         use_news = args.use_news
+        use_sentiment = args.use_sentiment
         use_reflection = args.use_reflection
-        price_s, news_s, reflection_s, template_s = env_history.get_prompt()
+        price_s, news_s, sentiment_s, reflection_s, template_s = env_history.get_prompt()
 
         onchain_analysis = llm(price_s, model, seed).strip()
         if to_print:
@@ -64,6 +65,13 @@ def eth_run(env, base_prompt, memory, starting_state, args):
         else:
             news_analysis = 'N/A'
 
+        if use_sentiment:
+            sentiment_analysis = llm(sentiment_s, model, seed).strip()
+            if to_print:
+                debug_print(sentiment_s, sentiment_analysis, 'SENTIMENT ANALYST')
+        else:
+            sentiment_analysis = 'N/A'
+
         if use_reflection:
             reflection = llm(reflection_s, model, seed).strip()
             if to_print:
@@ -71,7 +79,7 @@ def eth_run(env, base_prompt, memory, starting_state, args):
         else:
             reflection = 'N/A'
 
-        trader_prompt = template_s.format(onchain_analysis, news_analysis, reflection)
+        trader_prompt = template_s.format(onchain_analysis, news_analysis, sentiment_analysis, reflection)
         trader_response = llm(trader_prompt, model, seed).strip()
         if to_print:
             debug_print(trader_prompt, trader_response, 'TRADER')

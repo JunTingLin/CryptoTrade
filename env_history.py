@@ -44,6 +44,13 @@ class EnvironmentHistory:
         state = self._history[-1]['value']
         news_s = f"You are an ETH cryptocurrency trading analyst. You are required to analyze the following news articles:{delim}{state['news']}{delim}Write one concise paragraph to analyze the news and estimate the market trend accordingly."
 
+        # Sentiment analysis prompt
+        sentiment_mode = self.args.sentiment_mode
+        if sentiment_mode == "quantitative":
+            sentiment_s = f"You are an ETH cryptocurrency sentiment analyst. You are required to analyze the market sentiment from the following news articles:{delim}{state['news']}{delim}Analyze the overall market sentiment and provide a sentiment score from -2 (very bearish) to 2 (very bullish), where 0 is neutral. First explain your reasoning in one concise paragraph, then conclude with your sentiment score as a single number on a new line."
+        else:  # qualitative
+            sentiment_s = f"You are an ETH cryptocurrency sentiment analyst. You are required to analyze the market sentiment from the following news articles:{delim}{state['news']}{delim}Write one concise paragraph to describe the overall market sentiment (e.g., fearful, optimistic, uncertain, greedy) and explain how this sentiment might influence trading behavior."
+
         reflection_s = 'You are an ETH cryptocurrency trading analyst. Your analysis and action history is given in chronological order:' + delim
         for i, item in enumerate(self._history[-reflection_window * 3:]):
             if item['label'] == 'trader_response':
@@ -55,10 +62,10 @@ class EnvironmentHistory:
         reflection_s += delim + 'Reflect on your recent performance and instruct your future trades from a high level, e.g., identify what information is currently more important, and what to be next, like aggresive or conversative. Write one concise paragraph to reflect on your recent trading performance with a focus on the effective strategies and information that led to the most successful outcomes, and the ineffective strategies and information that led to loss of profit. Identify key trends and indicators in the current cryptocurrency market that are likely to influence future trades. Also assess whether a more aggressive or conservative trading approach is warranted.'
 
         base_prompt = 'You are an experienced ETH cryptocurrency trader and you are trying to maximize your overall profit by trading ETH. In each day, you will make an action to buy or sell ETH. You are assisted by a few analysts below and need to decide the final action.'
-        template_s = f"{base_prompt}\n\nON-CHAIN ANALYST REPORT:{delim}{{}}{delim}\nNEWS ANALYST REPORT:{delim}{{}}{delim}\nREFLECTION ANALYST REPORT:{delim}{{}}{delim}\n"
+        template_s = f"{base_prompt}\n\nON-CHAIN ANALYST REPORT:{delim}{{}}{delim}\nNEWS ANALYST REPORT:{delim}{{}}{delim}\nSENTIMENT ANALYST REPORT:{delim}{{}}{delim}\nREFLECTION ANALYST REPORT:{delim}{{}}{delim}\n"
         template_s += 'Now, start your response with your brief reasoning over the given reports. Then, based on the synthesized reports, conclude a clear market trend, emphasizing long-term strategies over short-term gains. Finally, indicate your trading action as a 1-decimal float in the range of [-1,1], reflecting your confidence in the market trend and your strategic decision to manage risk appropriately.'
 
-        return price_s, news_s, reflection_s, template_s
+        return price_s, news_s, sentiment_s, reflection_s, template_s
 
 def _get_base_query(base_query: str, memory: List[str]) -> str:
     query = base_query
