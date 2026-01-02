@@ -191,18 +191,36 @@ class ETHTradingEnv:
         open_price = today['open']
         next_open_price = next_day['open']  # assume today's close = next day's open
         
-        if -1 <= action < 0 and self.eth_held > 0:  # -1 sell
+        # Sell: action in [-1, 0)
+        if -1 <= action < 0 and self.eth_held > 0:
             eth_diff = abs(action) * self.eth_held
             cash_diff = eth_diff * open_price
+            # Calculate fees
+            gas_fee_cost = GAS_FEE * open_price
+            exchange_fee = cash_diff * EX_RATE
+            total_fee = gas_fee_cost + exchange_fee
+
+            # Execute trade
             self.eth_held -= eth_diff
-            self.cash += cash_diff
-            self.cash -= GAS_FEE * open_price + cash_diff * EX_RATE
-        if 0 < action <= 1 and self.cash > 0:  # 1 buy
-            cash_diff = abs(action) * self.cash
-            eth_diff = cash_diff / open_price
-            self.cash -= cash_diff
-            self.eth_held += eth_diff
-            self.cash -= GAS_FEE * open_price + cash_diff * EX_RATE
+            self.cash += cash_diff - total_fee  # Receive cash minus fees
+
+        # Buy: action in (0, 1]
+        if 0 < action <= 1 and self.cash > 0:
+            # Calculate desired purchase amount
+            desired_cash = abs(action) * self.cash
+
+            # Calculate fees for this transaction
+            gas_fee_cost = GAS_FEE * open_price
+            exchange_fee = desired_cash * EX_RATE
+            total_fee = gas_fee_cost + exchange_fee
+            total_cost = desired_cash + total_fee
+
+            # Only execute if we have enough cash (including fees)
+            if self.cash >= total_cost:
+                eth_diff = desired_cash / open_price
+                self.cash -= total_cost
+                self.eth_held += eth_diff
+            # else: insufficient cash, skip transaction
         
         self.current_step += 1
         if self.current_step >= self.total_steps - 1:
