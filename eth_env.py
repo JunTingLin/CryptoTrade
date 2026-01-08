@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import re
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
 from argparse import Namespace
 import os
@@ -56,7 +56,7 @@ class ETHTradingEnv:
         self.starting_cash_ratio = STARTING_CASH_RATIO
         # self.reset()
 
-    def get_close_state(self, today, next_day, first_day=False):
+    def get_close_state(self, today, next_day):
         next_open_price = next_day['open']
         close_net_worth = self.cash + self.eth_held * next_open_price
         close_roi = close_net_worth / self.starting_net_worth - 1  # return on investment
@@ -65,15 +65,13 @@ class ETHTradingEnv:
 
         date = today[self.timecol]
         parsed_time = datetime.strptime(date, self.price_timefmt)
-        if first_day:
-            parsed_time = parsed_time - timedelta(days=1)
         year, month, day = parsed_time.year, parsed_time.month, parsed_time.day
 
-        # next day's opening technical indicators
-        ma5 = next_day['SMA_5']
-        ma10 = next_day['SMA_10']
-        ma15 = next_day['SMA_15']
-        ma20 = next_day['SMA_20']
+        # Fixed: Use today's technical indicators (decision made at today's close)
+        ma5 = today['SMA_5']
+        ma10 = today['SMA_10']
+        ma15 = today['SMA_15']
+        ma20 = today['SMA_20']
         slma_signal = 'hold'
         short_ma = ma15
         long_ma = ma20
@@ -81,20 +79,21 @@ class ETHTradingEnv:
             slma_signal = 'sell'
         elif short_ma < long_ma:
             slma_signal = 'buy'
-        
-        sma = next_day[f'SMA_20']
-        sd = next_day[f'STD_20']
+
+        sma = today[f'SMA_20']
+        sd = today[f'STD_20']
         multiplier = 2
         upper_band = sma + (sd * multiplier)
         lower_band = sma - (sd * multiplier)
+        today_open_price = today['open']
         boll_signal = 'hold'
-        if next_open_price < lower_band:
+        if today_open_price < lower_band:
             boll_signal = 'buy'
-        elif next_open_price > upper_band:
+        elif today_open_price > upper_band:
             boll_signal = 'sell'
 
-        macd = next_day['MACD']
-        macd_signal_line = next_day['Signal_Line']
+        macd = today['MACD']
+        macd_signal_line = today['Signal_Line']
         macd_signal = 'hold'
         if macd < macd_signal_line:
             macd_signal = 'buy'
@@ -129,7 +128,7 @@ class ETHTradingEnv:
         close_state = {  # selectively used in prompt
             'cash': self.cash,
             'eth_held': self.eth_held,
-            'open': next_open_price,
+            'open': today['open'],
             'net_worth': close_net_worth,
             'roi': close_roi,
             'today_roi': today_roi,
@@ -146,12 +145,16 @@ class ETHTradingEnv:
 
     def reset(self):
         self.current_step = 0
-        next_day = today = self.data.iloc[self.current_step]
+        today = self.data.iloc[self.current_step]
+        if self.total_steps > 1:
+            next_day = self.data.iloc[self.current_step + 1]
+        else:
+            next_day = today
         self.starting_price = today['open']
         self.cash = self.starting_net_worth * STARTING_CASH_RATIO
         self.eth_held = (self.starting_net_worth - self.cash) / self.starting_price
         self.last_net_worth = self.starting_net_worth
-        close_state = self.get_close_state(today, next_day, first_day=True)
+        close_state = self.get_close_state(today, next_day)
         info = {
             'starting_cash': self.cash,
         }
@@ -161,17 +164,17 @@ class ETHTradingEnv:
         return close_state, reward, self.done, info
 
     # the agent receives last state and reward, takes an action, and receives new state and reward.
-    # last state: yesterday's news, today's open price, cash, held ETH
+    # last state: today's news, today's open price, cash, held ETH
     # last reward: yesterday's profit
-    # action: buy, sell, or hold
-    # new state: today's news, tomorrow's open price, cash, held ETH
-    # new reward: today's profit
+    # action: buy, sell, or hold (decide at today's close)
+    # new state: next day's news, next day's open price, cash, held ETH
+    # new reward: next day's profit
     def step(self, action):
         raw_action = action
         if type(action) == str:
             # actions = re.findall(r"[-+]?\d*\.\d+|\d+", action)
             actions = re.findall(r"-?(?:0(?:\.\d{1})|1\.0)", action)
-            
+
             if len(actions) == 0:
                 print(f'ERROR: Invalid llm response: {action}. Set to no action.')
                 action = 0.00
@@ -181,22 +184,47 @@ class ETHTradingEnv:
                 # print(f'Multiple actions in llm response: {action}. Pick one action.')
                 # action = float(actions[0])
                 action = float(actions[-1])
-        
+
         if not -1 <= action <= 1:
             print(f"ERROR: Invalid action: {action}. Set to no action.")
             action = 0.00
 
         today = self.data.iloc[self.current_step]
+        if self.current_step + 1 >= self.total_steps:
+            self.done = True
+            info = {
+                'raw_action': raw_action,
+                'actual_action': action,
+                'starting_cash': self.starting_net_worth,
+                'ref_all_in': self.starting_net_worth / self.starting_price * today['open'],
+                'today': today[self.timecol],
+            }
+            return self.last_state, 0, self.done, info
+
         next_day = self.data.iloc[self.current_step + 1]
-        open_price = today['open']
-        next_open_price = next_day['open']  # assume today's close = next day's open
-        
+        # Execute trade at next day's open (decision made at today's close)
+        trade_price = next_day['open']
+
+        if self.current_step + 2 >= self.total_steps:
+            self.done = True
+            info = {
+                'raw_action': raw_action,
+                'actual_action': action,
+                'starting_cash': self.starting_net_worth,
+                'ref_all_in': self.starting_net_worth / self.starting_price * trade_price,
+                'today': today[self.timecol],
+            }
+            return self.last_state, 0, self.done, info
+
+        next_next_day = self.data.iloc[self.current_step + 2]
+        valuation_price = next_next_day['open']  # Use next_next_day's open for performance calculation
+
         # Sell: action in [-1, 0)
         if -1 <= action < 0 and self.eth_held > 0:
             eth_diff = abs(action) * self.eth_held
-            cash_diff = eth_diff * open_price
+            cash_diff = eth_diff * trade_price
             # Calculate fees
-            gas_fee_cost = GAS_FEE * open_price
+            gas_fee_cost = GAS_FEE * trade_price
             exchange_fee = cash_diff * EX_RATE
             total_fee = gas_fee_cost + exchange_fee
 
@@ -210,30 +238,30 @@ class ETHTradingEnv:
             desired_cash = abs(action) * self.cash
 
             # Calculate fees for this transaction
-            gas_fee_cost = GAS_FEE * open_price
+            gas_fee_cost = GAS_FEE * trade_price
             exchange_fee = desired_cash * EX_RATE
             total_fee = gas_fee_cost + exchange_fee
             total_cost = desired_cash + total_fee
 
             # Only execute if we have enough cash (including fees)
             if self.cash >= total_cost:
-                eth_diff = desired_cash / open_price
+                eth_diff = desired_cash / trade_price
                 self.cash -= total_cost
                 self.eth_held += eth_diff
             # else: insufficient cash, skip transaction
-        
+
         self.current_step += 1
-        if self.current_step >= self.total_steps - 1:
+        if self.current_step >= self.total_steps - 2:
             self.done = True
 
-        close_state = self.get_close_state(today, next_day)
+        close_state = self.get_close_state(next_day, next_next_day)
         reward = close_state['roi'] - self.last_state['roi']  # reward = today's roi gain.
         self.last_state = close_state
         info = {
             'raw_action': raw_action,
             'actual_action': action,
             'starting_cash': self.starting_net_worth,
-            'ref_all_in': self.starting_net_worth / self.starting_price * next_open_price,
+            'ref_all_in': self.starting_net_worth / self.starting_price * valuation_price,
             'today': today[self.timecol],
         }
         return close_state, reward, self.done, info
